@@ -80,7 +80,6 @@ def format_errors(data):
             {
                 "errors": errors,
                 "version": data.get("version", ""),
-                "revision": data.get("revision", ""),
                 "received_at": datetime.now(timezone.utc).isoformat(),
             },
             indent=2,
@@ -130,11 +129,7 @@ def report():
             )
 
         return jsonify(
-            {
-                "status": "success",
-                "message": "Error report sent to Telegram",
-                "filename": filename,
-            }
+            {"status": "success", "message": "Error report sent to Telegram"}
         )
 
     except Exception as e:

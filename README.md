@@ -81,8 +81,7 @@ curl -X POST http://localhost:5000/logs \
   -F "errors[0][type]=test" \
   -F "errors[0][log_message]=Test error" \
   -F "errors[0][date]=$(date +%s)" \
-  -F "version=1.0" \
-  -F "revision=abc123"
+  -F "version=1.0"
 ```
 
 ---
@@ -94,7 +93,6 @@ curl -X POST http://localhost:5000/logs \
 - **Parameters**: 
   - `errors[N][field]` - Error data fields
   - `version` - Application version
-  - `revision` - Code revision
 
 ---
 
