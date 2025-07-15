@@ -92,8 +92,8 @@ def format_errors(data):
         return f"Formatting error: {str(e)}\n\nRaw data:\n{json.dumps(dict(data), indent=2)}"
 
 
-@app.route("/logs", methods=["POST"])
-def logs():
+@app.route("/report", methods=["POST"])
+def report():
     """Main handler for incoming error reports"""
     try:
         # Check if form data is present
