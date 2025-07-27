@@ -1,152 +1,224 @@
-import os
 import requests
-import json
-import argparse
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import os
+from http import HTTPStatus
+from helpers.git_releases import GitHubReleases
+import helpers.common as Common
 
 app = Flask(__name__)
 
-# Initialization with default values (empty strings)
-TELEGRAM_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
+UPDATE_ARCHIVE_NAME = "XC_VM.zip"  # update.tar.gz
+CHANGELOG_FILE_URL = "https://raw.githubusercontent.com/Vateron-Media/XC_VM_Update/refs/heads/main/changelog.json"
+
+# Rate limiting setup
+limiter = Limiter(
+    app=app, key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]
+)
 
 
-def load_config():
-    """
-    Loads configuration from environment variables or command-line arguments.
-    Priority: command-line arguments > environment variables > default values.
-    """
-    global TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
-
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Flask Error Logger")
-    parser.add_argument("--token", type=str, help="Telegram Bot Token")
-    parser.add_argument("--chat_id", type=str, help="Telegram Chat ID")
-    args = parser.parse_args()
-
-    # Set values (command-line arguments take precedence)
-    TELEGRAM_TOKEN = args.token or os.getenv("TELEGRAM_TOKEN", "")
-    TELEGRAM_CHAT_ID = args.chat_id or os.getenv("TELEGRAM_CHAT_ID", "")
-
-    # Check required parameters
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        raise ValueError("Telegram token and chat ID must be provided")
+# Security headers middleware
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
+    return response
 
 
-# Load configuration on application startup
-load_config()
-
-
-def format_errors(data):
-    """
-    Formats received errors into a structured JSON document.
-    Handles:
-    - Multiple errors in a single report
-    - Timestamp conversion
-    - Missing fields
-    """
+@app.route("/api/v1/releases", methods=["GET"])
+@limiter.limit("10 per minute")
+def get_release():
+    """Get next release version"""
     try:
-        errors = []
-        i = 0
+        version = request.args.get("version")
+        if not version:
+            return (
+                jsonify(
+                    {"status": "error", "message": "Version parameter is required"}
+                ),
+                HTTPStatus.BAD_REQUEST,
+            )
 
-        # Iterate through errors (format: errors[0][type], errors[1][type], ...)
-        while True:
-            prefix = f"errors[{i}]"
-            if f"{prefix}[type]" not in data:
-                break
+        # Sanitize input
+        version = version.strip()
+        if not repo.is_valid_version(version):
+            return (
+                jsonify({"status": "error", "message": "Invalid version format"}),
+                HTTPStatus.BAD_REQUEST,
+            )
 
-            # Build a dictionary with error data (with key existence checks)
-            error_data = {
-                "type": data.get(f"{prefix}[type]", "unknown"),
-                "message": data.get(f"{prefix}[log_message]", ""),
-                "file": data.get(f"{prefix}[log_extra]", ""),
-                "line": data.get(f"{prefix}[line]", "0"),
-                "date": data.get(f"{prefix}[date]", "0"),
-            }
+        next_version = repo.get_next_version(version)
+        changelog = repo.get_changelog(CHANGELOG_FILE_URL)
+        upd_archive_url = f"https://github.com/{config["git_owner"]}/{config["git_repo"]}/releases/download/{next_version}/{UPDATE_ARCHIVE_NAME}"
+        hash_md5 = repo.get_asset_hash(next_version, UPDATE_ARCHIVE_NAME)
 
-            # Convert timestamp to human-readable format
-            try:
-                dt = datetime.utcfromtimestamp(int(error_data["date"]))
-                error_data["human_date"] = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except (ValueError, TypeError):
-                error_data["human_date"] = "invalid_timestamp"
+        if not next_version:
+            return (
+                jsonify({"status": "error", "message": "Invalid panel version"}),
+                HTTPStatus.BAD_REQUEST,
+            )
 
-            errors.append(error_data)
-            i += 1
-
-        # Build the final JSON
-        return json.dumps(
-            {
-                "errors": errors,
-                "version": data.get("version", ""),
-                "received_at": datetime.now(timezone.utc).isoformat(),
-            },
-            indent=2,
-            ensure_ascii=False,
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "data": {
+                        "version": next_version,
+                        "changelog": changelog,
+                        "url": upd_archive_url,
+                        "md5": hash_md5,
+                    },
+                }
+            ),
+            HTTPStatus.OK,
         )
 
+    except ValueError as ve:
+        return (
+            jsonify({"status": "error", "message": f"Invalid version: {str(ve)}"}),
+            HTTPStatus.BAD_REQUEST,
+        )
     except Exception as e:
-        # Return raw data if formatting fails
-        return f"Formatting error: {str(e)}\n\nRaw data:\n{json.dumps(dict(data), indent=2)}"
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Internal server error",
+                    "error_type": type(e).__name__,
+                }
+            ),
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
 
 
-@app.route("/report", methods=["POST"])
+@app.route("/api/v1/report", methods=["POST"])
+@limiter.limit("5 per minute")
 def report():
-    """Main handler for incoming error reports"""
+    """Handle incoming error reports"""
     try:
-        # Check if form data is present
         if not request.form:
-            return jsonify({"status": "error", "message": "No form data received"}), 400
+            return (
+                jsonify({"status": "error", "message": "No form data received"}),
+                HTTPStatus.BAD_REQUEST,
+            )
+
+        # Validate form data size
+        if len(request.form) > 1000:  # Adjust limit as needed
+            return (
+                jsonify({"status": "error", "message": "Form data too large"}),
+                HTTPStatus.BAD_REQUEST,
+            )
 
         # Format error data
-        formatted_data = format_errors(request.form)
+        formatted_data = Common.format_errors(request.form)
 
         # Generate filename with timestamp
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"errors_{timestamp}.json"
 
-        # Send file to Telegram
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument"
+        # Validate Telegram configuration
+        if not config.get("tg_token") or not config.get("tg_chat"):
+            return (
+                jsonify(
+                    {"status": "error", "message": "Telegram configuration missing"}
+                ),
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+        # Send file to Telegram with timeout
+        url = f"https://api.telegram.org/bot{config['tg_token']}/sendDocument"
         response = requests.post(
             url,
-            data={"chat_id": TELEGRAM_CHAT_ID},
+            data={"chat_id": config["tg_chat"]},
             files={"document": (filename, formatted_data.encode("utf-8"))},
             timeout=10,
         )
 
-        # Handle Telegram API response
         if response.status_code != 200:
             return (
                 jsonify(
                     {
                         "status": "error",
-                        "message": "Telegram API error",
+                        "message": "Failed to send report to Telegram",
                         "telegram_response": response.text,
                     }
                 ),
-                500,
+                HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 
-        return jsonify(
-            {"status": "success", "message": "Error report sent to Telegram"}
+        return (
+            jsonify({"status": "success", "message": "Error report sent successfully"}),
+            HTTPStatus.OK,
         )
 
+    except requests.exceptions.RequestException as re:
+        return (
+            jsonify({"status": "error", "message": f"Network error: {str(re)}"}),
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
     except Exception as e:
-        # Handle unexpected errors
         return (
             jsonify(
                 {
-                    "status": "critical_error",
-                    "message": f"Internal server error: {str(e)}",
+                    "status": "error",
+                    "message": "Internal server error",
                     "error_type": type(e).__name__,
                 }
             ),
-            500,
+            HTTPStatus.INTERNAL_SERVER_ERROR,
         )
 
 
 if __name__ == "__main__":
-    # Run Flask app with configurable port
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    DEFAULT_CONFIG = {
+        "host": "0.0.0.0",
+        "port": 8080,
+        "debug": False,
+        "git_owner": "Vateron-Media",
+        "git_repo": "XC_VM",
+        "tg_token": os.environ.get("TG_TOKEN", ""),
+        "tg_chat": os.environ.get("TG_CHAT", ""),
+    }
+
+    # Load configuration
+    config = Common.load_config(
+        default_config=DEFAULT_CONFIG,
+        config_file_path="config.ini",
+        env_prefix="XC_VM_API_",
+    )
+
+    # Validate configuration
+    required_keys = ["git_owner", "git_repo", "tg_token", "tg_chat"]
+    missing_keys = [key for key in required_keys if not config.get(key)]
+    if missing_keys:
+        raise ValueError(f"Missing required configuration: {', '.join(missing_keys)}")
+
+    repo = GitHubReleases(config["git_owner"], config["git_repo"])
+
+    # Run with gunicorn in production
+    if not config["debug"]:
+        from gunicorn.app.base import Application
+
+        class FlaskApplication(Application):
+            def __init__(self, app):
+                self.application = app
+                super().__init__()
+
+            def load_config(self):
+                self.cfg.set("bind", f"{config['host']}:{config['port']}")
+                self.cfg.set("workers", 4)
+                self.cfg.set("timeout", 30)
+
+            def load(self):
+                return self.application
+
+        FlaskApplication(app).run()
+    else:
+        app.run(host=config["host"], port=config["port"], debug=config["debug"])
