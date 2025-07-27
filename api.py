@@ -61,7 +61,7 @@ def get_release():
 
         if not next_version:
             return (
-                jsonify({"status": "error", "message": "Invalid panel version"}),
+                jsonify({"status": "error", "message": "Updates not found"}),
                 HTTPStatus.BAD_REQUEST,
             )
 
