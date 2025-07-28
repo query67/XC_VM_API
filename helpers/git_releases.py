@@ -67,7 +67,7 @@ class GitHubReleases:
         Example:
             >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
             >>> repo.get_releases()
-            ['v1.0.2', 'v1.0.1', 'v1.0.0']
+            ['1.0.2', '1.0.1', '1.0.0']
         """
         if self._is_cache_valid():
             logger.info(f"Using cached releases for {self.owner}/{self.repo}")
@@ -98,35 +98,20 @@ class GitHubReleases:
             logger.error(f"Failed to fetch releases: {e}")
             raise
 
-    def get_latest_version(self) -> Optional[str]:
-        """
-        Get the latest release version (based on the order returned by GitHub).
-
-        Returns:
-            Optional[str]: The latest version tag, or None if no releases exist.
-
-        Example:
-            >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
-            >>> repo.get_latest_version()
-            'v1.0.2'
-        """
-        releases = self.get_releases()
-        return releases[0] if releases else None
-
     def get_next_version(self, current_version: str) -> Optional[str]:
         """
         Get the next version tag that comes after the specified current version.
 
         Args:
-            current_version (str): The current version tag (e.g., "v1.0.0").
+            current_version (str): The current version tag (e.g., "1.0.0").
 
         Returns:
             Optional[str]: The next version tag, or None if it's the latest or not found.
 
         Example:
             >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
-            >>> repo.get_next_version("v1.0.0")
-            'v1.0.1'
+            >>> repo.get_next_version("1.0.0")
+            '1.0.1'
         """
         releases = self.get_releases()
         if current_version not in releases:
@@ -146,7 +131,7 @@ class GitHubReleases:
         with a valid 32-character MD5 hash.
 
         Args:
-            version (str): The release tag (e.g., "v1.0.0").
+            version (str): The release tag (e.g., "1.0.0").
             asset_name (str): The asset file name to get the hash for (e.g., "update.tar.gz").
             hash_file_suffix (str): The suffix appended to the asset name to form the hash file name. Default is ".md5".
 
@@ -158,9 +143,9 @@ class GitHubReleases:
 
         Example:
             >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
-            >>> repo.get_asset_hash("v1.0.0", "update.tar.gz")
+            >>> repo.get_asset_hash("1.0.0", "update.tar.gz")
             'd41d8cd98f00b204e9800998ecf8427e'
-            >>> repo.get_asset_hash("v1.0.0", "update.tar.gz", hash_file_suffix=".hash")
+            >>> repo.get_asset_hash("1.0.0", "update.tar.gz", hash_file_suffix=".hash")
             'd41d8cd98f00b204e9800998ecf8427e'
         """
         try:
@@ -219,7 +204,7 @@ class GitHubReleases:
 
         Each release must include a changelog.json file in its assets, containing an array of strings
         with changes. Returns a JSON object with the structure:
-        [{"version": "v1.0.0", "changes": ["change1", "change2"]}, ...].
+        [{"version": "1.0.0", "changes": ["change1", "change2"]}, ...].
 
         Args:
             changelog_file_url (str): Link to file with changelog.
@@ -233,9 +218,9 @@ class GitHubReleases:
         Example:
             >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
             >>> repo.get_changelog()[
-                {"version": "v1.0.2", "changes": ["Fixed bug X", "Added feature Y"]},
-                {"version": "v1.0.1", "changes": ["Improved performance", "Updated docs"]},
-                {"version": "v1.0.0", "changes": ["Initial release", "Added core features"]}
+                {"version": "1.0.2", "changes": ["Fixed bug X", "Added feature Y"]},
+                {"version": "1.0.1", "changes": ["Improved performance", "Updated docs"]},
+                {"version": "1.0.0", "changes": ["Initial release", "Added core features"]}
             ]
         """
         try:
@@ -290,10 +275,10 @@ class GitHubReleases:
     @staticmethod
     def is_valid_version(version: str) -> bool:
         """
-        Validate whether a version string follows the format vX.Y.Z.
+        Validate whether a version string follows the format X.Y.Z.
 
         Args:
-            version (str): The version string to validate (e.g., "v1.0.0").
+            version (str): The version string to validate (e.g., "1.0.0").
 
         Returns:
             bool: True if valid, False otherwise.
@@ -302,9 +287,9 @@ class GitHubReleases:
             ValueError: If the version string is too long or contains invalid parts.
 
         Example:
-            >>> GitHubReleases.is_valid_version("v1.0.0")
+            >>> GitHubReleases.is_valid_version("1.0.0")
             True
-            >>> GitHubReleases.is_valid_version("v1.0")
+            >>> GitHubReleases.is_valid_version("1.0")
             False
             >>> GitHubReleases.is_valid_version("v01.0.0")
             False
@@ -317,13 +302,13 @@ class GitHubReleases:
             logger.error("Version string too long")
             raise ValueError("Version string is too long")
 
-        pattern = r"^v[0-9]+\.[0-9]+\.[0-9]+$"
+        pattern = r"^[0-9]+\.[0-9]+\.[0-9]+$"
         if not re.match(pattern, version):
             logger.warning(f"Invalid version format: {version}")
             return False
 
         try:
-            parts = version[1:].split(".")
+            parts = version.split(".")
             if len(parts) != 3:
                 logger.warning(f"Version must have three parts: {version}")
                 return False
@@ -350,13 +335,11 @@ class GitHubReleases:
 if __name__ == "__main__":
     repo = GitHubReleases("Vateron-Media", "XC_VM")
 
-    print("📦 Latest version:", repo.get_latest_version())
-
-    current = "v1.0.0"
+    current = "1.0.0"
     next_version = repo.get_next_version(current)
     print(f"🔁 Next version after {current}:", next_version)
 
-    hash_value = repo.get_asset_hash("v1.0.0", "update.tar.gz")
+    hash_value = repo.get_asset_hash("1.0.0", "update.tar.gz")
     print("🔑 Resource hash:", hash_value)
 
     notes = repo.get_changelog("https://raw.githubusercontent.com/Vateron-Media/XC_VM_Update/refs/heads/main/changelog.json")

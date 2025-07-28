@@ -112,17 +112,17 @@ TG_CHAT = your-telegram-chat-id
 ### Testing
 Test the update endpoint:
 ```bash
-curl "http://localhost:8080/api/v1/update?version=v1.0.0"
+curl "http://localhost:8080/api/v1/update?version=1.0.0"
 ```
 Test the check_updates endpoint:
 ```bash
-curl "http://localhost:8080/api/v1/check_updates?version=v1.0.0"   
+curl "http://localhost:8080/api/v1/check_updates?version=1.0.0"   
 ```
 
 Test the error report endpoint:
 ```bash
 curl -X POST http://localhost:8080/api/v1/report \
-  -F "version=v1.0.0" \
+  -F "version=1.0.0" \
   -F "errors[0][type]=RuntimeError" \
   -F "errors[0][log_message]=Database connection failed" \
   -F "errors[0][log_extra]=db.py" \
@@ -141,7 +141,7 @@ Check for updates with the return of the next release version, change log, and r
 - **Method**: GET
 - **URL**: `/api/v1/check_updates?version=<version>`
 - **Query Parameters**:
-  - `version` (required): Current version in `vX.Y.Z` format (e.g., `v1.0.0`).
+  - `version` (required): Current version in `X.Y.Z` format (e.g., `1.0.0`).
 
 #### Response
 - **Success (200 OK)**:
@@ -152,17 +152,17 @@ Check for updates with the return of the next release version, change log, and r
         "changes": [
           "Initial release"
         ],
-        "version": "v1.0.0"
+        "version": "1.0.0"
       },
       {
         "changes": [
           "Fixed authentication bug"
         ],
-        "version": "v1.0.1"
+        "version": "1.0.1"
       }
     ],
-    "url": "https://github.com/Vateron-Media/XC_VM/releases/tag/v1.0.1",
-    "version": "v1.0.1"
+    "url": "https://github.com/Vateron-Media/XC_VM/releases/tag/1.0.1",
+    "version": "1.0.1"
   }
   ```
 - **Error (400 Bad Request)**:
@@ -190,7 +190,7 @@ Check for updates with the return of the next release version, change log, and r
 
 #### Example
 ```bash
-curl "http://localhost:8080/api/v1/check_updates?version=v1.0.0"
+curl "http://localhost:8080/api/v1/check_updates?version=1.0.0"
 ```
 
 
@@ -201,13 +201,13 @@ Gets the download URL for `update.tar.gz` and its MD5 hash.
 - **Method**: GET
 - **URL**: `/api/v1/update?version=<version>`
 - **Query Parameters**:
-  - `version` (required): Current version in `vX.Y.Z` format (e.g., `v1.0.0`).
+  - `version` (required): Current version in `X.Y.Z` format (e.g., `1.0.0`).
 
 #### Response
 - **Success (200 OK)**:
   ```json
   {
-      "url": "https://github.com/Vateron-Media/XC_VM/releases/download/v1.0.1/update.tar.gz",
+      "url": "https://github.com/Vateron-Media/XC_VM/releases/download/1.0.1/update.tar.gz",
       "md5": "d41d8cd98f00b204e9800998ecf8427e"
   }
   ```
@@ -236,7 +236,7 @@ Gets the download URL for `update.tar.gz` and its MD5 hash.
 
 #### Example
 ```bash
-curl "http://localhost:8080/api/v1/update?version=v1.0.0"
+curl "http://localhost:8080/api/v1/update?version=1.0.0"
 ```
 
 ### POST /api/v1/report
@@ -247,7 +247,7 @@ Receives error reports via form data, formats them into a JSON document, and sen
 - **URL**: `/api/v1/report`
 - **Content-Type**: `application/x-www-form-urlencoded`
 - **Form Data**:
-  - `version`: Application version (e.g., `v1.0.0`).
+  - `version`: Application version (e.g., `1.0.0`).
   - `errors[i][type]`: Error type (e.g., `RuntimeError`).
   - `errors[i][log_message]`: Error message.
   - `errors[i][log_extra]`: File where the error occurred.
@@ -257,7 +257,7 @@ Receives error reports via form data, formats them into a JSON document, and sen
 #### Example Request
 ```bash
 curl -X POST http://localhost:8080/api/v1/report \
-  -F "version=v1.0.0" \
+  -F "version=1.0.0" \
   -F "errors[0][type]=RuntimeError" \
   -F "errors[0][log_message]=Database connection failed" \
   -F "errors[0][log_extra]=db.py" \
@@ -291,7 +291,7 @@ curl -X POST http://localhost:8080/api/v1/report \
       "human_date": "2023-10-11 20:00:10"
     }
   ],
-  "version": "v1.0.0",
+  "version": "1.0.0",
   "received_at": "2025-07-27T08:37:00.123456+00:00"
 }
 ```
@@ -353,7 +353,7 @@ curl -X POST http://localhost:8080/api/v1/report \
 4. **GitHub API rate limits**:
    - Provide a GitHub API token via `XC_VM_API_GIT_TOKEN` to increase rate limits.
 5. **Invalid version format**:
-   - Ensure versions follow the `vX.Y.Z` format (e.g., `v1.0.0`).
+   - Ensure versions follow the `X.Y.Z` format (e.g., `1.0.0`).
 
 ---
 
