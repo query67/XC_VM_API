@@ -11,7 +11,6 @@ import helpers.common as Common
 app = Flask(__name__)
 
 UPDATE_ARCHIVE_NAME = "update.tar.gz"
-CHANGELOG_FILE_URL = "https://raw.githubusercontent.com/Vateron-Media/XC_VM_Update/refs/heads/main/changelog.json"
 
 # Rate limiting setup
 limiter = Limiter(
@@ -32,9 +31,65 @@ def add_security_headers(response):
     return response
 
 
+@app.route("/api/v1/check_updates", methods=["GET"])
+@limiter.limit("10 per minute")
+def check_updates():
+
+    try:
+        version = request.args.get("version")
+        if not version:
+            return (
+                jsonify(
+                    {"status": "error", "message": "Version parameter is required"}
+                ),
+                HTTPStatus.BAD_REQUEST,
+            )
+
+        # Sanitize input
+        version = version.strip()
+        if not repo.is_valid_version(version):
+            return (
+                jsonify({"status": "error", "message": "Invalid version format"}),
+                HTTPStatus.BAD_REQUEST,
+            )
+
+        next_version = repo.get_next_version(version)
+        changelog = repo.get_changelog(
+            f"https://raw.githubusercontent.com/{config["git_owner"]}/{config["git_repo"]}_Update/refs/heads/main/changelog.json"
+        )
+        url = f"https://github.com/{config["git_owner"]}/{config["git_repo"]}/releases/tag/{next_version}"
+
+        if not next_version:
+            return (
+                jsonify({"status": "error", "message": "Updates not found"}),
+                HTTPStatus.BAD_REQUEST,
+            )
+
+        return (
+            jsonify({"version": next_version, "changelog": changelog, "url": url}),
+            HTTPStatus.OK,
+        )
+    except ValueError as ve:
+        return (
+            jsonify({"status": "error", "message": f"Invalid version: {str(ve)}"}),
+            HTTPStatus.BAD_REQUEST,
+        )
+    except Exception as e:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Internal server error",
+                    "error_type": type(e).__name__,
+                }
+            ),
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
+
+
 @app.route("/api/v1/update", methods=["GET"])
 @limiter.limit("10 per minute")
-def get_release():
+def get_update():
     """Get next release version"""
     try:
         version = request.args.get("version")

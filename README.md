@@ -110,9 +110,13 @@ TG_CHAT = your-telegram-chat-id
    ```
 
 ### Testing
-Test the release endpoint:
+Test the update endpoint:
 ```bash
 curl "http://localhost:8080/api/v1/update?version=v1.0.0"
+```
+Test the check_updates endpoint:
+```bash
+curl "http://localhost:8080/api/v1/check_updates?version=v1.0.0"   
 ```
 
 Test the error report endpoint:
@@ -129,6 +133,66 @@ curl -X POST http://localhost:8080/api/v1/report \
 ---
 
 ## 🌐 API Endpoints
+
+### GET /api/v1/check_updates
+Check for updates with the return of the next release version, change log, and release link
+
+#### Request
+- **Method**: GET
+- **URL**: `/api/v1/check_updates?version=<version>`
+- **Query Parameters**:
+  - `version` (required): Current version in `vX.Y.Z` format (e.g., `v1.0.0`).
+
+#### Response
+- **Success (200 OK)**:
+  ```json
+  {
+    "changelog": [
+      {
+        "changes": [
+          "Initial release"
+        ],
+        "version": "v1.0.0"
+      },
+      {
+        "changes": [
+          "Fixed authentication bug"
+        ],
+        "version": "v1.0.1"
+      }
+    ],
+    "url": "https://github.com/Vateron-Media/XC_VM/releases/tag/v1.0.1",
+    "version": "v1.0.1"
+  }
+  ```
+- **Error (400 Bad Request)**:
+  ```json
+  {
+    "status": "error",
+    "message": "Version parameter is required"
+  }
+  ```
+  or
+  ```json
+  {
+    "status": "error",
+    "message": "Invalid version format"
+  }
+  ```
+- **Error (500 Internal Server Error)**:
+  ```json
+  {
+    "status": "error",
+    "message": "Internal server error",
+    "error_type": "RequestException"
+  }
+  ```
+
+#### Example
+```bash
+curl "http://localhost:8080/api/v1/check_updates?version=v1.0.0"
+```
+
 
 ### GET /api/v1/update
 Gets the download URL for `update.tar.gz` and its MD5 hash.
@@ -172,7 +236,7 @@ Gets the download URL for `update.tar.gz` and its MD5 hash.
 
 #### Example
 ```bash
-curl "http://localhost:8080/api/v1/releases?version=v1.0.0"
+curl "http://localhost:8080/api/v1/update?version=v1.0.0"
 ```
 
 ### POST /api/v1/report
