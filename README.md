@@ -143,11 +143,8 @@ Gets the download URL for `update.tar.gz` and its MD5 hash.
 - **Success (200 OK)**:
   ```json
   {
-    "status": "success",
-    "data": {
       "url": "https://github.com/Vateron-Media/XC_VM/releases/download/v1.0.1/update.tar.gz",
       "md5": "d41d8cd98f00b204e9800998ecf8427e"
-    }
   }
   ```
 - **Error (400 Bad Request)**:

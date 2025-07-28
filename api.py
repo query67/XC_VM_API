@@ -67,11 +67,8 @@ def get_release():
         return (
             jsonify(
                 {
-                    "status": "success",
-                    "data": {
-                        "url": upd_archive_url,
-                        "md5": hash_md5,
-                    },
+                    "url": upd_archive_url,
+                    "md5": hash_md5,
                 }
             ),
             HTTPStatus.OK,
