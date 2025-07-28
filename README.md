@@ -131,7 +131,7 @@ curl -X POST http://localhost:8080/api/v1/report \
 ## 🌐 API Endpoints
 
 ### GET /api/v1/update
-Gets the download URL for `XC_VM.zip` and its MD5 hash.
+Gets the download URL for `update.tar.gz` and its MD5 hash.
 
 #### Request
 - **Method**: GET
@@ -145,7 +145,7 @@ Gets the download URL for `XC_VM.zip` and its MD5 hash.
   {
     "status": "success",
     "data": {
-      "url": "https://github.com/Vateron-Media/XC_VM/releases/download/v1.0.1/XC_VM.zip",
+      "url": "https://github.com/Vateron-Media/XC_VM/releases/download/v1.0.1/update.tar.gz",
       "md5": "d41d8cd98f00b204e9800998ecf8427e"
     }
   }

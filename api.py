@@ -10,7 +10,7 @@ import helpers.common as Common
 
 app = Flask(__name__)
 
-UPDATE_ARCHIVE_NAME = "XC_VM.zip"  # update.tar.gz
+UPDATE_ARCHIVE_NAME = "update.tar.gz"
 CHANGELOG_FILE_URL = "https://raw.githubusercontent.com/Vateron-Media/XC_VM_Update/refs/heads/main/changelog.json"
 
 # Rate limiting setup

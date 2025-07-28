@@ -142,12 +142,12 @@ class GitHubReleases:
         Retrieve the MD5 hash of a release asset from its corresponding hash file.
 
         This method looks for a plain text file named with the asset file name plus a suffix
-        (e.g., "XC_VM.zip.md5" for "XC_VM.zip"). The hash file must contain a single line
+        (e.g., "update.tar.gz.md5" for "update.tar.gz"). The hash file must contain a single line
         with a valid 32-character MD5 hash.
 
         Args:
             version (str): The release tag (e.g., "v1.0.0").
-            asset_name (str): The asset file name to get the hash for (e.g., "XC_VM.zip").
+            asset_name (str): The asset file name to get the hash for (e.g., "update.tar.gz").
             hash_file_suffix (str): The suffix appended to the asset name to form the hash file name. Default is ".md5".
 
         Returns:
@@ -158,9 +158,9 @@ class GitHubReleases:
 
         Example:
             >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
-            >>> repo.get_asset_hash("v1.0.0", "XC_VM.zip")
+            >>> repo.get_asset_hash("v1.0.0", "update.tar.gz")
             'd41d8cd98f00b204e9800998ecf8427e'
-            >>> repo.get_asset_hash("v1.0.0", "XC_VM.zip", hash_file_suffix=".hash")
+            >>> repo.get_asset_hash("v1.0.0", "update.tar.gz", hash_file_suffix=".hash")
             'd41d8cd98f00b204e9800998ecf8427e'
         """
         try:
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     next_version = repo.get_next_version(current)
     print(f"🔁 Next version after {current}:", next_version)
 
-    hash_value = repo.get_asset_hash("v1.0.0", "XC_VM.zip")
+    hash_value = repo.get_asset_hash("v1.0.0", "update.tar.gz")
     print("🔑 Resource hash:", hash_value)
 
     notes = repo.get_changelog("https://raw.githubusercontent.com/Vateron-Media/XC_VM_Update/refs/heads/main/changelog.json")
