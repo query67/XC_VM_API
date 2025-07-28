@@ -32,7 +32,7 @@ def add_security_headers(response):
     return response
 
 
-@app.route("/api/v1/releases", methods=["GET"])
+@app.route("/api/v1/update", methods=["GET"])
 @limiter.limit("10 per minute")
 def get_release():
     """Get next release version"""
@@ -55,7 +55,6 @@ def get_release():
             )
 
         next_version = repo.get_next_version(version)
-        changelog = repo.get_changelog(CHANGELOG_FILE_URL)
         upd_archive_url = f"https://github.com/{config["git_owner"]}/{config["git_repo"]}/releases/download/{next_version}/{UPDATE_ARCHIVE_NAME}"
         hash_md5 = repo.get_asset_hash(next_version, UPDATE_ARCHIVE_NAME)
 
@@ -70,8 +69,6 @@ def get_release():
                 {
                     "status": "success",
                     "data": {
-                        "version": next_version,
-                        "changelog": changelog,
                         "url": upd_archive_url,
                         "md5": hash_md5,
                     },

@@ -112,7 +112,7 @@ TG_CHAT = your-telegram-chat-id
 ### Testing
 Test the release endpoint:
 ```bash
-curl "http://localhost:8080/api/v1/releases?version=v1.0.0"
+curl "http://localhost:8080/api/v1/update?version=v1.0.0"
 ```
 
 Test the error report endpoint:
@@ -130,12 +130,12 @@ curl -X POST http://localhost:8080/api/v1/report \
 
 ## 🌐 API Endpoints
 
-### GET /api/v1/releases
-Fetches the next release version after the provided version, including the changelog, download URL for `XC_VM.zip`, and its MD5 hash.
+### GET /api/v1/update
+Gets the download URL for `XC_VM.zip` and its MD5 hash.
 
 #### Request
 - **Method**: GET
-- **URL**: `/api/v1/releases?version=<version>`
+- **URL**: `/api/v1/update?version=<version>`
 - **Query Parameters**:
   - `version` (required): Current version in `vX.Y.Z` format (e.g., `v1.0.0`).
 
@@ -145,13 +145,6 @@ Fetches the next release version after the provided version, including the chang
   {
     "status": "success",
     "data": {
-      "version": "v1.0.1",
-      "changelog": [
-        {
-          "version": "v1.0.1",
-          "changes": ["Fixed authentication bug", "Improved performance"]
-        }
-      ],
       "url": "https://github.com/Vateron-Media/XC_VM/releases/download/v1.0.1/XC_VM.zip",
       "md5": "d41d8cd98f00b204e9800998ecf8427e"
     }
