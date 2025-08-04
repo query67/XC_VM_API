@@ -10,7 +10,9 @@ import helpers.common as Common
 
 app = Flask(__name__)
 
-UPDATE_ARCHIVE_NAME = "update.tar.gz"
+MAIN_UPDATE_ARCHIVE = "update.tar.gz"
+LB_INSTALL_ARCHIVE = "loadbalancer.tar.gz"
+LB_UPDATE_ARCHIVE = "loadbalancer_update.tar.gz"
 
 # Rate limiting setup
 limiter = Limiter(
@@ -93,10 +95,20 @@ def get_update():
     """Get next release version"""
     try:
         version = request.args.get("version")
+        file_type = request.args.get("file_type")
+
         if not version:
             return (
                 jsonify(
                     {"status": "error", "message": "Version parameter is required"}
+                ),
+                HTTPStatus.BAD_REQUEST,
+            )
+
+        if not file_type:
+            return (
+                jsonify(
+                    {"status": "error", "message": "File type parameter is required"}
                 ),
                 HTTPStatus.BAD_REQUEST,
             )
@@ -109,9 +121,27 @@ def get_update():
                 HTTPStatus.BAD_REQUEST,
             )
 
+        match file_type:
+            case "main":
+                update_file = MAIN_UPDATE_ARCHIVE
+            case "lb":
+                update_file = LB_INSTALL_ARCHIVE
+            case "lb_update":
+                update_file = LB_UPDATE_ARCHIVE
+            case _:
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "File type parameter is not valide",
+                        }
+                    ),
+                    HTTPStatus.BAD_REQUEST,
+                )
+
         next_version = repo.get_next_version(version)
-        upd_archive_url = f"https://github.com/{config["git_owner"]}/{config["git_repo"]}/releases/download/{next_version}/{UPDATE_ARCHIVE_NAME}"
-        hash_md5 = repo.get_asset_hash(next_version, UPDATE_ARCHIVE_NAME)
+        upd_archive_url = f"https://github.com/{config["git_owner"]}/{config["git_repo"]}/releases/download/{next_version}/{update_file}"
+        hash_md5 = repo.get_asset_hash(next_version, update_file)
 
         if not next_version:
             return (
