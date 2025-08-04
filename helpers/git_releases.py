@@ -120,9 +120,7 @@ class GitHubReleases:
         index = releases.index(current_version)
         return releases[index - 1] if index > 0 else None
 
-    def get_asset_hash(
-        self, version: str, asset_name: str, hash_file_suffix: str = ".md5"
-    ) -> Optional[str]:
+    def get_asset_hash(self, version: str, asset_name: str) -> Optional[str]:
         """
         Retrieve the MD5 hash of a release asset from its corresponding hash file.
 
@@ -133,7 +131,6 @@ class GitHubReleases:
         Args:
             version (str): The release tag (e.g., "1.0.0").
             asset_name (str): The asset file name to get the hash for (e.g., "update.tar.gz").
-            hash_file_suffix (str): The suffix appended to the asset name to form the hash file name. Default is ".md5".
 
         Returns:
             Optional[str]: The MD5 hash string, or None if not found or invalid.
@@ -144,8 +141,6 @@ class GitHubReleases:
         Example:
             >>> repo = GitHubReleases("Vateron-Media", "XC_VM")
             >>> repo.get_asset_hash("1.0.0", "update.tar.gz")
-            'd41d8cd98f00b204e9800998ecf8427e'
-            >>> repo.get_asset_hash("1.0.0", "update.tar.gz", hash_file_suffix=".hash")
             'd41d8cd98f00b204e9800998ecf8427e'
         """
         try:
@@ -163,7 +158,7 @@ class GitHubReleases:
             for release in releases:
                 if release.get("tag_name") == version:
                     assets = release.get("assets", [])
-                    hash_file_name = f"{asset_name}{hash_file_suffix}"
+                    hash_file_name = "hashes.md5"
 
                     for asset in assets:
                         if asset.get("name") == hash_file_name:
@@ -175,16 +170,25 @@ class GitHubReleases:
                             hash_response.raise_for_status()
                             hash_text = hash_response.text.strip()
 
-                            if re.match(r"^[0-9a-fA-F]{32}$", hash_text):
-                                logger.info(
-                                    f"Retrieved MD5 hash for {asset_name} in version {version}"
-                                )
-                                return hash_text
+                            for line in hash_text.splitlines():
+                                line = line.strip()
+                                if not line:  # Пропускаем пустые строки
+                                    continue
+                                parts = line.split(
+                                    maxsplit=1
+                                )  # Делим только по первому пробелу
 
-                            logger.warning(
-                                f"Invalid MD5 hash format in {hash_file_name} for version {version}"
-                            )
-                            return None
+                                if len(parts) == 2:
+                                    if parts[1] == asset_name:
+                                        logger.info(
+                                            f"Retrieved MD5 hash for {asset_name} in version {version}"
+                                        )
+                                        return parts[0]
+                                else:
+                                    logger.warning(
+                                        f"Invalid MD5 hash format in {hash_file_name} for version {version}"
+                                    )
+                                    return None
 
                     logger.warning(
                         f"Hash file {hash_file_name} not found for version {version}"
@@ -240,11 +244,12 @@ class GitHubReleases:
             if response.status_code == 200:
                 changelog = response.json()
                 # Get list of valid release versions
-                valid_versions = {release['tag_name'] for release in releases}
+                valid_versions = {release["tag_name"] for release in releases}
                 # Filter changelog to only include entries with matching release versions
                 filtered_changelog = [
-                    entry for entry in changelog 
-                    if entry.get('version') in valid_versions
+                    entry
+                    for entry in changelog
+                    if entry.get("version") in valid_versions
                 ]
                 logger.info(
                     f"Successfully retrieved changelog with {len(filtered_changelog)} versions "
@@ -271,7 +276,7 @@ class GitHubReleases:
                 f"Failed to fetch changelog: {e} (Status code: {response.status_code if 'response' in locals() else 'N/A'})"
             )
             return []
-        
+
     @staticmethod
     def is_valid_version(version: str) -> bool:
         """
