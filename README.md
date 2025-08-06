@@ -3,7 +3,7 @@
 ---
 
 ## 📌 Overview
-The XC_VM Update API is a Flask-based RESTful API designed to manage software updates for the XC_VM application and handle error reports. It interacts with the GitHub Releases API to provide information about available updates and sends structured error reports to a Telegram chat for monitoring. The API is secure, rate-limited, and suitable for deployment on platforms like Heroku.
+The XC_VM Update API is a Flask-based RESTful API designed to manage software updates for the XC_VM application and handle error reports. It interacts with the GitHub Releases API to provide information about available updates and sends structured error reports to a Telegram chat for monitoring. The API is secure, rate-limited.
 
 ---
 
@@ -19,6 +19,23 @@ The XC_VM Update API is a Flask-based RESTful API designed to manage software up
 
 ---
 
+## 🧠 Security and API architecture
+
+At this stage, this API is used **as a support tool** and is not a mandatory part of the XC_VM panel. It is designed for:
+
+- automating the retrieval of information about new releases from GitHub;
+- secure processing and delivery of error logs to Telegram.
+
+We are aware that using an external API server can pose a security threat — an attacker may attempt to spoof updates or collect data. Therefore, the architecture is based on the following principles:
+
+- **No updates are installed directly through the API**. The user decides whether to download them or not.
+- **The main source of truth is GitHub Releases**, not a third-party server.
+- **An API error or unavailability does not affect the functionality of the panel**.
+- In the future, the logging system will be redesigned: **error logs will be stored locally**, and the user will be able to send them manually via GitHub Issues or Telegram.
+- The API itself will remain as a separate module or will be disabled in the final version if it is not needed.
+
+---
+
 ## 🚀 Deployment
 
 ### Prerequisites
@@ -28,31 +45,6 @@ The XC_VM Update API is a Flask-based RESTful API designed to manage software up
 - A Telegram chat ID (find via [@userinfobot](https://t.me/userinfobot))
 - Optional: A GitHub API token for authenticated requests (to avoid rate limits)
 
-### Deployment Steps (Heroku Example)
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Vateron-Media/XC_VM_Update.git
-   cd XC_VM_Update
-   ```
-2. Create a Heroku app:
-   ```bash
-   heroku create your-app-name
-   ```
-3. Set environment variables:
-   ```bash
-   heroku config:set XC_VM_API_TG_TOKEN="your_bot_token"
-   heroku config:set XC_VM_API_TG_CHAT="your_chat_id"
-   heroku config:set XC_VM_API_GIT_OWNER="Vateron-Media"
-   heroku config:set XC_VM_API_GIT_REPO="XC_VM"
-   ```
-4. Deploy to Heroku:
-   ```bash
-   git push heroku main
-   ```
-5. Verify deployment:
-   ```bash
-   heroku open
-   ```
 
 ### Environment Variables
 | Variable | Description | Example |
@@ -337,22 +329,13 @@ curl -X POST http://localhost:8080/api/v1/report \
 ---
 
 ## 🛠️ Troubleshooting
-1. **Missing configuration**:
-   ```bash
-   heroku config:set XC_VM_API_TG_TOKEN=your_token
-   heroku config:set XC_VM_API_TG_CHAT=your_chat_id
-   ```
-2. **Check logs**:
-   ```bash
-   heroku logs --tail
-   ```
-3. **Test locally**:
+1. **Test locally**:
    ```bash
    python api.py --tg_token test_token --tg_chat test_chat --git_owner Vateron-Media --git_repo XC_VM
    ```
-4. **GitHub API rate limits**:
+2. **GitHub API rate limits**:
    - Provide a GitHub API token via `XC_VM_API_GIT_TOKEN` to increase rate limits.
-5. **Invalid version format**:
+3. **Invalid version format**:
    - Ensure versions follow the `X.Y.Z` format (e.g., `1.0.0`).
 
 ---
