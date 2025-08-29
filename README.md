@@ -3,14 +3,11 @@
 ---
 
 ## 📌 Overview
-The XC_VM Update API is a Flask-based RESTful API designed to manage software updates for the XC_VM application and handle error reports. It interacts with the GitHub Releases API to provide information about available updates and sends structured error reports to a Telegram chat for monitoring. The API is secure, rate-limited.
-
+The XC_VM Update API is a Flask-based RESTful API for managing software updates for the XC_VM application. It interacts with the GitHub Releases API to provide information about available updates. The API is secure and rate-limited.
 ---
 
 ## ⚙️ Features
 - 📦 Fetches the next release version, changelog, download URL, and MD5 hash from GitHub
-- 📤 Receives and formats error reports into structured JSON
-- 📬 Sends error reports to a Telegram chat as JSON files
 - 🔒 Includes security headers for enhanced protection
 - 🚦 Rate limiting to prevent abuse
 - ⚙️ Flexible configuration via environment variables, config files, or command-line arguments
@@ -49,8 +46,6 @@ We are aware that using an external API server can pose a security threat — an
 ### Environment Variables
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `XC_VM_API_TG_TOKEN` | Telegram bot token | `6849849849:AAFMdmsdrftgykOnrO8v2uTwwg3i8zKZlTI` |
-| `XC_VM_API_TG_CHAT` | Telegram chat ID | `10077994977` |
 | `XC_VM_API_GIT_OWNER` | GitHub repository owner | `Vateron-Media` |
 | `XC_VM_API_GIT_REPO` | GitHub repository name | `XC_VM` |
 | `XC_VM_API_HOST` | Server host | `0.0.0.0` |
@@ -66,8 +61,6 @@ PORT = 8080
 DEBUG = False
 GIT_OWNER = Vateron-Media
 GIT_REPO = XC_VM
-TG_TOKEN = your-telegram-bot-token
-TG_CHAT = your-telegram-chat-id
 ```
 
 ---
@@ -87,8 +80,6 @@ TG_CHAT = your-telegram-chat-id
    ```
 3. Set environment variables:
    ```bash
-   export XC_VM_API_TG_TOKEN="your_token"
-   export XC_VM_API_TG_CHAT="your_chat_id"
    export XC_VM_API_GIT_OWNER="Vateron-Media"
    export XC_VM_API_GIT_REPO="XC_VM"
    ```
@@ -98,7 +89,7 @@ TG_CHAT = your-telegram-chat-id
    ```
    Or use command-line arguments:
    ```bash
-   python api.py --tg_token your_token --tg_chat your_chat_id --git_owner Vateron-Media --git_repo XC_VM
+   python api.py --git_owner Vateron-Media --git_repo XC_VM
    ```
 
 ### Testing
@@ -109,17 +100,6 @@ curl "http://localhost:8080/api/v1/update?version=1.0.0"
 Test the check_updates endpoint:
 ```bash
 curl "http://localhost:8080/api/v1/check_updates?version=1.0.0"   
-```
-
-Test the error report endpoint:
-```bash
-curl -X POST http://localhost:8080/api/v1/report \
-  -F "version=1.0.0" \
-  -F "errors[0][type]=RuntimeError" \
-  -F "errors[0][log_message]=Database connection failed" \
-  -F "errors[0][log_extra]=db.py" \
-  -F "errors[0][line]=42" \
-  -F "errors[0][date]=1697059200"
 ```
 
 ---
@@ -231,107 +211,12 @@ Gets the download URL for `update.tar.gz` and its MD5 hash.
 curl "http://localhost:8080/api/v1/update?version=1.0.0"
 ```
 
-### POST /api/v1/report
-Receives error reports via form data, formats them into a JSON document, and sends them to a Telegram chat as a file.
-
-#### Request
-- **Method**: POST
-- **URL**: `/api/v1/report`
-- **Content-Type**: `application/x-www-form-urlencoded`
-- **Form Data**:
-  - `version`: Application version (e.g., `1.0.0`).
-  - `errors[i][type]`: Error type (e.g., `RuntimeError`).
-  - `errors[i][log_message]`: Error message.
-  - `errors[i][log_extra]`: File where the error occurred.
-  - `errors[i][line]`: Line number of the error.
-  - `errors[i][date]`: Unix timestamp of the error.
-
-#### Example Request
-```bash
-curl -X POST http://localhost:8080/api/v1/report \
-  -F "version=1.0.0" \
-  -F "errors[0][type]=RuntimeError" \
-  -F "errors[0][log_message]=Database connection failed" \
-  -F "errors[0][log_extra]=db.py" \
-  -F "errors[0][line]=42" \
-  -F "errors[0][date]=1697059200" \
-  -F "errors[1][type]=ValueError" \
-  -F "errors[1][log_message]=Invalid input" \
-  -F "errors[1][log_extra]=input.py" \
-  -F "errors[1][line]=15" \
-  -F "errors[1][date]=1697059210"
-```
-
-#### Formatted Output (Sent to Telegram)
-```json
-{
-  "errors": [
-    {
-      "type": "RuntimeError",
-      "message": "Database connection failed",
-      "file": "db.py",
-      "line": "42",
-      "date": "1697059200",
-      "human_date": "2023-10-11 20:00:00"
-    },
-    {
-      "type": "ValueError",
-      "message": "Invalid input",
-      "file": "input.py",
-      "line": "15",
-      "date": "1697059210",
-      "human_date": "2023-10-11 20:00:10"
-    }
-  ],
-  "version": "1.0.0",
-  "received_at": "2025-07-27T08:37:00.123456+00:00"
-}
-```
-
-#### Response
-- **Success (200 OK)**:
-  ```json
-  {
-    "status": "success",
-    "message": "Error report sent successfully"
-  }
-  ```
-- **Error (400 Bad Request)**:
-  ```json
-  {
-    "status": "error",
-    "message": "No form data received"
-  }
-  ```
-  or
-  ```json
-  {
-    "status": "error",
-    "message": "Form data too large"
-  }
-  ```
-- **Error (500 Internal Server Error)**:
-  ```json
-  {
-    "status": "error",
-    "message": "Telegram configuration missing"
-  }
-  ```
-  or
-  ```json
-  {
-    "status": "error",
-    "message": "Failed to send report to Telegram",
-    "telegram_response": "..."
-  }
-  ```
-
 ---
 
 ## 🛠️ Troubleshooting
 1. **Test locally**:
    ```bash
-   python api.py --tg_token test_token --tg_chat test_chat --git_owner Vateron-Media --git_repo XC_VM
+   python api.py --git_owner Vateron-Media --git_repo XC_VM
    ```
 2. **GitHub API rate limits**:
    - Provide a GitHub API token via `XC_VM_API_GIT_TOKEN` to increase rate limits.
@@ -342,7 +227,6 @@ curl -X POST http://localhost:8080/api/v1/report \
 
 ## 📋 Rate Limiting
 - **GET /api/v1/releases**: 10 requests per minute
-- **POST /api/v1/report**: 5 requests per minute
 - Global: 200 requests per day, 50 requests per hour
 
 Exceeding limits returns a 429 Too Many Requests response.

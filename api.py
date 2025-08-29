@@ -177,84 +177,6 @@ def get_update():
         )
 
 
-@app.route("/api/v1/report", methods=["POST"])
-@limiter.limit("5 per minute")
-def report():
-    """Handle incoming error reports"""
-    try:
-        if not request.form:
-            return (
-                jsonify({"status": "error", "message": "No form data received"}),
-                HTTPStatus.BAD_REQUEST,
-            )
-
-        # Validate form data size
-        if len(request.form) > 1000:  # Adjust limit as needed
-            return (
-                jsonify({"status": "error", "message": "Form data too large"}),
-                HTTPStatus.BAD_REQUEST,
-            )
-
-        # Format error data
-        formatted_data = Common.format_errors(request.form)
-
-        # Generate filename with timestamp
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        filename = f"errors_{timestamp}.json"
-
-        # Validate Telegram configuration
-        if not config.get("tg_token") or not config.get("tg_chat"):
-            return (
-                jsonify(
-                    {"status": "error", "message": "Telegram configuration missing"}
-                ),
-                HTTPStatus.INTERNAL_SERVER_ERROR,
-            )
-
-        # Send file to Telegram with timeout
-        url = f"https://api.telegram.org/bot{config['tg_token']}/sendDocument"
-        response = requests.post(
-            url,
-            data={"chat_id": config["tg_chat"]},
-            files={"document": (filename, formatted_data.encode("utf-8"))},
-            timeout=10,
-        )
-
-        if response.status_code != 200:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Failed to send report to Telegram",
-                        "telegram_response": response.text,
-                    }
-                ),
-                HTTPStatus.INTERNAL_SERVER_ERROR,
-            )
-
-        return (
-            jsonify({"status": "success", "message": "Error report sent successfully"}),
-            HTTPStatus.OK,
-        )
-
-    except requests.exceptions.RequestException as re:
-        return (
-            jsonify({"status": "error", "message": f"Network error: {str(re)}"}),
-            HTTPStatus.INTERNAL_SERVER_ERROR,
-        )
-    except Exception as e:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Internal server error",
-                    "error_type": type(e).__name__,
-                }
-            ),
-            HTTPStatus.INTERNAL_SERVER_ERROR,
-        )
-
-
 if __name__ == "__main__":
     DEFAULT_CONFIG = {
         "host": "0.0.0.0",
@@ -262,8 +184,6 @@ if __name__ == "__main__":
         "debug": False,
         "git_owner": "Vateron-Media",
         "git_repo": "XC_VM",
-        "tg_token": os.environ.get("TG_TOKEN", ""),
-        "tg_chat": os.environ.get("TG_CHAT", ""),
     }
 
     # Load configuration
@@ -274,7 +194,7 @@ if __name__ == "__main__":
     )
 
     # Validate configuration
-    required_keys = ["git_owner", "git_repo", "tg_token", "tg_chat"]
+    required_keys = ["git_owner", "git_repo"]
     missing_keys = [key for key in required_keys if not config.get(key)]
     if missing_keys:
         raise ValueError(f"Missing required configuration: {', '.join(missing_keys)}")
