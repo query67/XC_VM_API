@@ -1,4 +1,5 @@
 # XC_VM Update API
+# The code will be archived and deleted soon api is no longer used by the panel
 
 ---
 
